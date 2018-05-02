@@ -1,0 +1,37 @@
+// 1.Load game of thrones data in csv format
+LOAD CSV WITH HEADERS FROM "https://www.macalester.edu/~abeverid/data/stormofswords.csv" AS row
+MERGE (src:Character {name: row.Source})
+MERGE (tgt:Character {name: row.Target})
+MERGE (src)-[r:INTERACTS]->(tgt)
+ON CREATE SET r.weight = toInt(row.Weight)
+
+
+//2.Interactions between source and target with weights as the relation
+MATCH p=(:Character)-[:INTERACTS]-(:Character)
+RETURN p
+
+//3.Compute number of characters in the graph
+MATCH (c:Character) RETURN count(c)
+
+//4.Summary statistics for the number of other characters each character has interacted with
+MATCH (c:Character)-[:INTERACTS]->()
+WITH c, count(*) AS num
+RETURN min(num) AS min, max(num) AS max, avg(num) AS avg_characters, stdev(num) AS stdev
+
+//5.Shortest path from Arya Stark to Gendry
+MATCH (catelyn:Character {name: "Catelyn"}), (gendry:Character {name: "Gendry"})
+MATCH p=shortestPath((catelyn)-[INTERACTS*]-(gendry))
+RETURN p
+
+//6.All shortest paths from Catelyn Stark to Khal Drogo
+MATCH (catelyn:Character {name: "Catelyn"}), (drogo:Character {name: "Drogo"})
+MATCH p=allShortestPaths((catelyn)-[INTERACTS*]-(drogo))
+RETURN p
+
+//7.Degree of Centrality : Number of other characters each character has interacted with
+MATCH (c:Character)
+RETURN c.name AS character, size( (c)-[:INTERACTS]-() ) AS degree ORDER BY degree DESC
+
+//8.Weighed Degree centrality : Total number of interactions a character has participated
+MATCH (c:Character)-[r:INTERACTS]-()
+RETURN c.name AS character, sum(r.weight) AS weightedDegree ORDER BY weightedDegree DESC
